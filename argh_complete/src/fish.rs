@@ -40,7 +40,9 @@ impl Generator for Fish {
 
         let mut known_value_flags_str = String::new();
         for flag in value_flags {
-            known_value_flags_str.push_str(&format!("'{flag}' "));
+            known_value_flags_str.push('\'');
+            known_value_flags_str.push_str(&flag);
+            known_value_flags_str.push_str("' ");
         }
 
         // Generate the custom parsing state machine function that replaces `__fish_seen_subcommand_from`
@@ -114,52 +116,52 @@ fn generate_fish_cmd(
 
     // Generate flags for this command
     for flag in cmd.flags {
-        let mut line = format!("complete -c {}", base_cmd);
+        write!(out, "complete -c {}", base_cmd).unwrap();
         if !joined_condition.is_empty() {
-            line.push(' ');
-            line.push_str(&joined_condition);
+            write!(out, " {}", joined_condition).unwrap();
         }
 
         // Add -f if applicable
-        line.push_str(no_files);
+        write!(out, "{}", no_files).unwrap();
 
         if !flag.long.is_empty() {
             let stripped_long = flag.long.trim_start_matches('-');
             if !stripped_long.is_empty() {
-                line.push_str(&format!(" -l {}", stripped_long));
+                write!(out, " -l {}", stripped_long).unwrap();
             }
         }
 
         if let Some(short) = flag.short {
-            line.push_str(&format!(" -s {}", short));
+            write!(out, " -s {}", short).unwrap();
         }
 
         if let FlagInfoKind::Option { .. } = flag.kind {
-            line.push_str(" -r");
+            write!(out, " -r").unwrap();
         }
 
         if !flag.description.is_empty() {
             let description = flag.description.replace("'", "\\'");
-            line.push_str(&format!(" -d '{}'", description));
+            write!(out, " -d '{}'", description).unwrap();
         }
 
-        writeln!(out, "{}", line).unwrap();
+        writeln!(out).unwrap();
     }
 
     // Generate immediate subcommands (as arguments to this command)
     for subcmd in &cmd.commands {
-        let mut line = format!("complete -c {}", base_cmd);
+        write!(out, "complete -c {}", base_cmd).unwrap();
         if !joined_condition.is_empty() {
-            line.push(' ');
-            line.push_str(&joined_condition);
+            write!(out, " {}", joined_condition).unwrap();
         }
         // Subcommands are just arguments that don't take files
-        line.push_str(&format!(
+        write!(
+            out,
             " -f -a '{}' -d '{}'",
             subcmd.name,
             subcmd.command.description.replace("'", "\\'")
-        ));
-        writeln!(out, "{}", line).unwrap();
+        )
+        .unwrap();
+        writeln!(out).unwrap();
     }
 
     // Recurse
